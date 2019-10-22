@@ -157,15 +157,8 @@ class CLI(object):
         if self.options.no_system_configs is None:
             self.options.no_system_configs = False
 
-        bzt_rc = os.path.expanduser(os.path.join('~', ".bzt-rc"))
-        if os.path.exists(bzt_rc):
-            self.log.debug("Using personal config: %s" % bzt_rc)
-        else:
-            self.log.debug("Adding personal config: %s", bzt_rc)
-            self.log.info("No personal config found, creating one at %s", bzt_rc)
-            shutil.copy(os.path.join(RESOURCES_DIR, 'base-bzt-rc.yml'), bzt_rc)
-
-        merged_config = self.engine.configure([bzt_rc] + configs, not self.options.no_system_configs)
+        system_configs = [] if self.options.no_system_configs else [self.__get_or_create_bzt_rc()]
+        merged_config = self.engine.configure(system_configs + configs, not self.options.no_system_configs)
 
         # apply aliases
         for alias in self.options.aliases:
@@ -183,6 +176,17 @@ class CLI(object):
         self.engine.create_artifacts_dir(configs, merged_config)
         self.engine.default_cwd = os.getcwd()
         self.engine.eval_env()  # yacky, I don't like having it here, but how to apply it after aliases and artif dir?
+
+    def __get_or_create_bzt_rc(self):
+        bzt_rc = os.path.expanduser(os.path.join('~', ".bzt-rc"))
+        if os.path.exists(bzt_rc):
+            self.log.debug("Using personal config: %s" % bzt_rc)
+        else:
+            self.log.debug("Adding personal config: %s", bzt_rc)
+            self.log.info("No personal config found, creating one at %s", bzt_rc)
+            shutil.copy(os.path.join(RESOURCES_DIR, 'base-bzt-rc.yml'), bzt_rc)
+
+        return bzt_rc
 
     def __is_verbose(self):
         settings = self.engine.config.get(SETTINGS, force_set=True)
